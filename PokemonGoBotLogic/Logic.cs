@@ -11,7 +11,9 @@ using PokemonGoBotLogic.Interfaces;
 
 namespace PokemonGoBotLogic
 {
+    public class Logic : ILogic
     {
+        public Client PClient { get; set; }
         public LogicStatus Status { get; set; }
         private readonly ISettings _clientSettings;
         private readonly Inventory _inventory;
