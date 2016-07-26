@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using AllEnum;
-using PokemonBotManagerConsole.LocationHelper;
-using PokemonBotManagerConsole.Pokemon;
+using PokemonBotManager.LocationHelper;
+using PokemonBotManager.Pokemon;
 using PokemonGo.RocketAPI;
 using PokemonGo.RocketAPI.Enums;
 
-namespace PokemonBotManagerConsole.BotManager
+namespace PokemonBotManager.BotManager
 {
     class BotSettings : ISettings
     {

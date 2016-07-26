@@ -17,7 +17,7 @@ namespace PokemonGoBotLogic.Interfaces
     {
         Client PClient { get; set; }
         LogicStatus Status { get; set; }
-        Task StopBot();
+        void StopBot();
         Task Execute();
     }
 }

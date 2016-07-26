@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace PokemonBotManagerConsole.BotManager.Exceptions
+namespace PokemonBotManager.BotManager.Exceptions
 {
     public class AccountAlreadyBindedException : Exception
     {

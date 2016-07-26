@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
-using PokemonBotManagerConsole.Pokemon;
-using PokemonBotManagerConsole.BotManager.Exceptions;
+using PokemonBotManager.BotManager.Exceptions;
+using PokemonBotManager.Pokemon;
 
-namespace PokemonBotManagerConsole.BotManager
+namespace PokemonBotManager.BotManager
 {
     class BotManager
     {

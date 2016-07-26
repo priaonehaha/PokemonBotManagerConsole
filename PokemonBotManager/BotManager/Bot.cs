@@ -1,30 +1,34 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using PokemonBotManagerConsole.Pokemon;
-using PokemonBotManagerConsole.LocationHelper;
+using PokemonBotManager.LocationHelper;
+using PokemonBotManager.Pokemon;
 using PokemonGo.RocketAPI;
 using PokemonGoBotLogic;
 using PokemonGoBotLogic.Interfaces;
 
-namespace PokemonBotManagerConsole.BotManager
+namespace PokemonBotManager.BotManager
 {
     class Bot
     {
-        public bool IsWorking = false;
+        public bool IsWorking
+        {
+            get { return botTask?.Status == TaskStatus.Running; }
+        }
         public int BotId { get; }
         public bool IsValid => BotId != -1;
         public BotSettings Settings { get; }
-        private Client _client;
+        private Client Client { get; }
         private ILogic logic;
+
+        private Task botTask;// = Task.Run(logic.Execute());
 
 
         public Bot(int botId, Account assignedAccount)
         {
             Settings = new BotSettings(assignedAccount);
+
+            Client = new Client(Settings);
+            logic = new Logic(Client, Settings);
         }
 
         public Bot(int botId, Account assignedAccount, Location assignedLocation) : this(botId, assignedAccount)
@@ -32,12 +36,32 @@ namespace PokemonBotManagerConsole.BotManager
             Settings.BottingLocation = assignedLocation;
         }
 
+        public void SetLogic(ILogic newLogic)
+        {
+            logic = newLogic;
+        }
+
         public void StartBot()
         {
-            _client = new Client(Settings);
-            logic = new Logic(_client, Settings);
-            logic.Execute().Wait();
+
+            botTask = Task.Run(logic.Execute).ContinueWith(BotStopped);
+            botTask.Start();
             //_client.Login.DoPtcLogin(Settings.AccountData.Username, Settings.AccountData.Password).Wait();
+        }
+
+        public void StopBot(bool waitForBot = true)
+        {
+            logic.StopBot();
+            if (waitForBot)
+            {
+                botTask.Wait();
+            }
+        }
+
+        //TODO: idk
+        void BotStopped(Task task)
+        {
+            
         }
 
         public bool Equals(Bot oBot)

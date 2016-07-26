@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace PokemonBotManagerConsole.Properties {
+namespace PokemonBotManager.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
