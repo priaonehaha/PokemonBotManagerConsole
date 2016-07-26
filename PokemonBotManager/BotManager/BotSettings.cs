@@ -8,7 +8,7 @@ using PokemonGo.RocketAPI.Enums;
 
 namespace PokemonBotManager.BotManager
 {
-    class BotSettings : ISettings
+    public class BotSettings : ISettings
     {
         public AuthType AuthType => AuthType.Ptc;
         public double DefaultAltitude => 10d;

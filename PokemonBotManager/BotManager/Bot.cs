@@ -8,7 +8,7 @@ using PokemonGoBotLogic.Interfaces;
 
 namespace PokemonBotManager.BotManager
 {
-    class Bot
+    public class Bot
     {
         public bool IsWorking
         {

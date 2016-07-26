@@ -121,7 +121,7 @@ namespace PokemonGoBotLogic
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine();
+                    Console.WriteLine("PostLoginExecute exception: " + ex);
                 }
 
                 await Task.Delay(5000);

@@ -5,7 +5,7 @@ using PokemonBotManager.Pokemon;
 
 namespace PokemonBotManager.BotManager
 {
-    class BotManager
+    public class BotManager
     {
         private static readonly object SyncRoot = new Object();
         private static BotManager _instance;
