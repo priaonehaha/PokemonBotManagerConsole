@@ -35,7 +35,7 @@ namespace PokemonBotManagerConsole.BotManager
         public void StartBot()
         {
             _client = new Client(Settings);
-            logic = new Logic(_client);
+            logic = new Logic(_client, Settings);
             logic.Execute().Wait();
             //_client.Login.DoPtcLogin(Settings.AccountData.Username, Settings.AccountData.Password).Wait();
         }
