@@ -175,7 +175,7 @@ namespace PokemonGoBotLogic
 
         private async Task ExecuteFarmingPokestopsAndPokemons()
         {
-            var mapObjects = await PClient.GetMapObjects();
+            var mapObjects = await PClient.Map.GetMapObjects();
 
             var pokeStops =
                 mapObjects.MapCells.SelectMany(i => i.Forts)
@@ -186,7 +186,7 @@ namespace PokemonGoBotLogic
             var fortDatas = pokeStops as FortData[] ?? pokeStops.ToArray();
             foreach (var pokeStop in fortDatas)
             {
-                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng,
+                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
                     pokeStop.Latitude, pokeStop.Longitude);
                 var update = await PClient.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude, 10);
                 var fortInfo = await PClient.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
@@ -206,7 +206,7 @@ namespace PokemonGoBotLogic
 
         private async Task ExecuteCatchAllNearbyPokemons()
         {
-            var mapObjects = await PClient.GetMapObjects();
+            var mapObjects = await PClient.Map.GetMapObjects();
 
             var pokemons = mapObjects.MapCells.SelectMany(i => i.CatchablePokemons);
             var mapPokemons = pokemons as MapPokemon[] ?? pokemons.ToArray();
@@ -215,7 +215,7 @@ namespace PokemonGoBotLogic
                 var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng,
                     pokemon.Latitude, pokemon.Longitude);
                 if (distance > 100)
-                    await Task.Delay(15000);
+                    await Task.Delay(15 * 1000);
                 else
                     await Task.Delay(500);
 
