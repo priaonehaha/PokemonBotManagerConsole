@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using PokemonBotManager.BotManager;
 using PokemonBotManager.Pokemon;
+using PokemonGoBotLogic;
 
 namespace BotManagerConsole
 {
@@ -46,7 +47,8 @@ namespace BotManagerConsole
                 case 0:
                     foreach (var account in AccountList.Instance.Accounts)
                     {
-                        BotManager.Instance.RequestBot(account);
+                       var bot =  BotManager.Instance.RequestBot(account);
+                        bot.SetLogic(new Logic(bot.Client, bot.Settings));
                     }
                     break;
                 case 1:

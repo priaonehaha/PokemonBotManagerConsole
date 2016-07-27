@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using PokemonGo.RocketAPI;
 using PokemonGo.RocketAPI.GeneratedCode;
 
-namespace PokemonGoBotLogic.Interfaces
+namespace PokemonBotManager.BotManager.Interfaces
 {
     //TODO: This :^ ) 
     public enum LogicStatus
@@ -22,4 +22,5 @@ namespace PokemonGoBotLogic.Interfaces
         Task Execute();
         Task<PlayerStats> GetPlayerStats();
     }
+}
 }

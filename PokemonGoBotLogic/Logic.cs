@@ -8,7 +8,7 @@ using PokemonGo.RocketAPI.Enums;
 using PokemonGo.RocketAPI.Exceptions;
 using PokemonGo.RocketAPI.Extensions;
 using PokemonGo.RocketAPI.GeneratedCode;
-using PokemonGoBotLogic.Interfaces;
+using PokemonBotManager.BotManager.Interfaces;
 
 namespace PokemonGoBotLogic
 {

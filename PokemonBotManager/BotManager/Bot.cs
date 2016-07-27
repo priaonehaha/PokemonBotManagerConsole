@@ -2,11 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using PokemonBotManager.BotManager.Exceptions;
+using PokemonBotManager.BotManager.Interfaces;
 using PokemonBotManager.LocationHelper;
 using PokemonBotManager.Pokemon;
 using PokemonGo.RocketAPI;
-using PokemonGoBotLogic;
-using PokemonGoBotLogic.Interfaces;
 
 namespace PokemonBotManager.BotManager
 {
@@ -23,7 +22,7 @@ namespace PokemonBotManager.BotManager
         public int BotId { get; }
         public bool IsValid => BotId != -1;
         public BotSettings Settings { get; }
-        private Client Client { get; }
+        public Client Client { get; }
 
         public Bot(int botId, Account assignedAccount)
         {
@@ -33,7 +32,7 @@ namespace PokemonBotManager.BotManager
                 BottingLocation = LocationManager.Instance.GetLocations().FirstOrDefault()
             };
             Client = new Client(Settings);
-            logic = new Logic(Client, Settings);
+           // logic = new Logic(Client, Settings);
         }
 
         public Bot(int botId, Account assignedAccount, Location assignedLocation) : this(botId, assignedAccount)

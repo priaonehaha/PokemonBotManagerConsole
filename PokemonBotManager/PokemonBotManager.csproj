@@ -61,6 +61,7 @@
     <Compile Include="BotManager\Exceptions\AccountAlreadyBindedException.cs" />
     <Compile Include="BotManager\Exceptions\BotLimitExceededException.cs" />
     <Compile Include="BotManager\Exceptions\LocationNotSetException.cs" />
+    <Compile Include="BotManager\Interfaces\ILogic.cs" />
     <Compile Include="LocationHelper\Location.cs" />
     <Compile Include="LocationHelper\LocationManager.cs" />
     <Compile Include="Pokemon\Account.cs" />
@@ -78,12 +79,6 @@
       <Generator>PublicSettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\PokemonGoBotLogic\PokemonGoBotLogic.csproj">
-      <Project>{8b81b054-0124-4fbf-bcba-2570450a14f3}</Project>
-      <Name>PokemonGoBotLogic</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
