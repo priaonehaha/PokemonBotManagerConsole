@@ -13,7 +13,11 @@ namespace BotManagerConsole
         private static int MainMenu()
         {
             Console.Clear();
-
+            /*
+             * TODO:
+             * Check Accounts
+             * Check Locations
+             * */
             Console.WriteLine("Bot Manager by Andre - Max Bots: " + PokemonBotManager.Properties.Settings.Default.MaxBots);
             Console.WriteLine("1) Check Bot Status");
             Console.WriteLine("2) Check Accounts");
@@ -29,6 +33,10 @@ namespace BotManagerConsole
             }
         }
 
+        /**
+         * TODO:
+         * Manage each bot
+         */
         private static void BotMenuDoStuff(int option)
         {
             switch (option)
@@ -49,6 +57,7 @@ namespace BotManagerConsole
                     break;
             }
         }
+
         private static int BotMenu()
         {
             Console.Clear();

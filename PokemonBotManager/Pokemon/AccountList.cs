@@ -50,6 +50,11 @@ namespace PokemonBotManager.Pokemon
             Accounts.Add(person);
         }
 
+        /**
+         * 
+         * TODO: 
+         * Include location in file
+         */
         public int LoadFromFile(string file = "PTCAccounts.txt")
         {
             int loadedAccs = 0;
