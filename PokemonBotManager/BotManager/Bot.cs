@@ -48,14 +48,11 @@ namespace PokemonBotManager.BotManager
                 try
                 {
                     var stats = logic.GetPlayerStats().Result;
-                    var profile = Client.GetProfile().Result.Profile;
-                    var pokemons =
-                        Client.GetInventory().Result.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Pokemon)
-                            .Where(p => p != null && p?.PokemonId > 0)
-                            .ToArray();
+                    var profile = Client.Player.GetPlayer().Result.PlayerData;
+                    var pokemons = Client.Inventory.GetInventory().Result.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.PokemonData).Where(p => p?.PokemonId > 0).ToArray();
                     Console.WriteLine(
                         $"Level: {stats.Level}({stats.Experience}/{stats.NextLevelXp}) | Team: {profile.Team} " +
-                        $"| Stardust: {profile.Currency.ToArray()[1].Amount} | Pokemons: {pokemons.Length}");
+                        $"| Stardust: {profile.Currencies[1].Amount} | Pokemons: {pokemons.Length}");
                 }
                 catch (Exception)
                 {
