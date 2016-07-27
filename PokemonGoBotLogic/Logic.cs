@@ -2,20 +2,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AllEnum;
+using PokemonBotManager.BotManager.Interfaces;
 using PokemonGo.RocketAPI;
 using PokemonGo.RocketAPI.Enums;
 using PokemonGo.RocketAPI.Exceptions;
 using PokemonGo.RocketAPI.Extensions;
-using PokemonGo.RocketAPI.GeneratedCode;
-using PokemonBotManager.BotManager.Interfaces;
+using POGOProtos.Data;
+using POGOProtos.Data.Player;
+using POGOProtos.Enums;
+using POGOProtos.Inventory.Item;
+using POGOProtos.Map.Fort;
+using POGOProtos.Map.Pokemon;
+using POGOProtos.Networking.Responses;
 
 namespace PokemonGoBotLogic
 {
     public class Logic : ILogic
     {
         private readonly Inventory _inventory;
-        private readonly ISettings PClientSettings;
         private bool stop;
 
         public PokemonId[] UnwantedPokemonTypes =
@@ -60,16 +64,15 @@ namespace PokemonGoBotLogic
             PokemonId.Oddish,
             PokemonId.Gloom,
             PokemonId.Jigglypuff,
-            PokemonId.Clefary,
+            PokemonId.Clefairy,
             PokemonId.Electabuzz,
             PokemonId.Clefable,
             PokemonId.Sandshrew
         };
 
-        public Logic(Client client, ISettings settings)
+        public Logic(Client client)
         {
             PClient = client;
-            PClientSettings = settings;
             _inventory = new Inventory(client);
         }
 
@@ -83,9 +86,9 @@ namespace PokemonGoBotLogic
             {
                 try
                 {
-                    if (PClientSettings.AuthType == AuthType.Ptc)
-                        await PClient.DoPtcLogin(PClientSettings.PtcUsername, PClientSettings.PtcPassword);
-                    else if (PClientSettings.AuthType == AuthType.Google)
+                    if (PClient.Settings.AuthType == AuthType.Ptc)
+                        await PClient.Login.DoPtcLogin();
+                    else if (PClient.Settings.AuthType == AuthType.Google)
                         throw new NotImplementedException();
 
                     await PostLoginExecute();
@@ -104,8 +107,10 @@ namespace PokemonGoBotLogic
 
         public async Task<PlayerStats> GetPlayerStats()
         {
-            var stats = await _inventory.GetPlayerStats();
-            var stat = stats.FirstOrDefault();
+            var stat =
+                PClient.Inventory.GetInventory()
+                    .Result.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.PlayerStats)
+                    .FirstOrDefault(p => p != null);
             return stat;
         }
 
@@ -116,7 +121,8 @@ namespace PokemonGoBotLogic
                 try
                 {
                     //Console.WriteLine($"{PClientSettings.PtcUsername}: Post Login Execute");
-                    await PClient.SetServer();
+
+                    //await PClient.SetServer(); // Not needed in new API
                     //var profile = await PClient.GetProfile();
 
                     await EvolveAllPokemonWithEnoughCandy();
@@ -130,10 +136,10 @@ namespace PokemonGoBotLogic
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"{PClientSettings.PtcUsername}'sPostLoginExecute exception: " + ex);
+                    Console.WriteLine($"{PClient.Settings.PtcUsername}'sPostLoginExecute exception: " + ex);
                 }
 
-                await Task.Delay(5000);
+                await Task.Delay(5*1000);
             }
         }
 
@@ -163,67 +169,85 @@ namespace PokemonGoBotLogic
         {
             foreach (var pokemon in unwantedPokemons)
             {
-                await PClient.TransferPokemon(pokemon.Id);
-                await Task.Delay(3000);
+                await _inventory.TransferPokemon(pokemon.Id); //.TransferPokemon(pokemon.Id);
+                await Task.Delay(500);
             }
         }
 
         private async Task ExecuteFarmingPokestopsAndPokemons()
         {
-            var mapObjects = await PClient.GetMapObjects();
+            var mapObjects = await PClient.Map.GetMapObjects();
 
             var pokeStops =
                 mapObjects.MapCells.SelectMany(i => i.Forts)
                     .Where(
                         i =>
                             i.Type == FortType.Checkpoint &&
-                            i.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime());
-            var fortDatas = pokeStops as FortData[] ?? pokeStops.ToArray();
-            foreach (var pokeStop in fortDatas)
+                            i.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime())
+                    .OrderBy(
+                        p => Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
+                            p.Latitude, p.Longitude));
+            foreach (var pokeStop in pokeStops)
             {
-                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng,
+                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
                     pokeStop.Latitude, pokeStop.Longitude);
-                var update = await PClient.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude, 10);
-                var fortInfo = await PClient.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
-                var fortSearch = await PClient.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
+
+                if (distance > 100)
+                    await Task.Delay((int) (distance/111)); //Don't tp faster than 400 Km/h (111 m/s)
+                await PClient.Player.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude, 10);
+                // var fortInfo = await PClient.Fort.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
+                await PClient.Fort.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
                 //Console.Write($"{PClientSettings.PtcUsername}: Using Pokestop: {fortInfo.Name} in {Math.Round(distance)}m distance");
                 //Console.Write($"{PClientSettings.PtcUsername}: Farmed XP: {fortSearch.ExperienceAwarded}, Gems: { fortSearch.GemsAwarded}, Eggs: {fortSearch.PokemonDataEgg} Items: {fortSearch.ItemsAwarded}");
 
 
                 //var profile = await PClient.GetProfile();
 
-                await Task.Delay(1000);
+                await Task.Delay(500);
                 await RecycleItems();
+                await CatchPokemonInPokestop(pokeStop);
                 await ExecuteCatchAllNearbyPokemons();
                 await TransferDuplicatePokemon();
             }
         }
 
+        private async Task CatchPokemonInPokestop(FortData pokeStop)
+        {
+            if (pokeStop != null)
+            {
+                var encounter = await PClient.Encounter.EncounterLurePokemon(pokeStop.LureInfo.EncounterId, pokeStop.Id);
+                if (encounter.Result == DiskEncounterResponse.Types.Result.Success)
+                {
+                    await CatchEncounter(encounter, null, pokeStop, pokeStop.LureInfo.EncounterId);
+                }
+            }
+        }
+
         private async Task ExecuteCatchAllNearbyPokemons()
         {
-            var mapObjects = await PClient.GetMapObjects();
+
+            var mapObjects = await PClient.Map.GetMapObjects();
 
             var pokemons = mapObjects.MapCells.SelectMany(i => i.CatchablePokemons);
-            var mapPokemons = pokemons as MapPokemon[] ?? pokemons.ToArray();
-            foreach (var pokemon in mapPokemons)
+            foreach (var pokemon in pokemons)
             {
-                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng,
+                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
                     pokemon.Latitude, pokemon.Longitude);
                 if (distance > 100)
-                    await Task.Delay(15000);
-                else
-                    await Task.Delay(500);
+                    await Task.Delay((int) (distance/111)); //Don't tp faster than 400 Km/h (111 m/s)
 
-                await PClient.UpdatePlayerLocation(pokemon.Latitude, pokemon.Longitude, PClientSettings.DefaultAltitude);
+                await
+                    PClient.Player.UpdatePlayerLocation(pokemon.Latitude, pokemon.Longitude,
+                        PClient.Settings.DefaultAltitude);
 
-                var encounter = await PClient.EncounterPokemon(pokemon.EncounterId, pokemon.SpawnpointId);
+                var encounter = await PClient.Encounter.EncounterPokemon(pokemon.EncounterId, pokemon.SpawnPointId);
                 await CatchEncounter(encounter, pokemon);
             }
 
-            await Task.Delay(15000);
+            await Task.Delay(5 * 1000);
         }
 
-        private async Task CatchEncounter(EncounterResponse encounter, MapPokemon pokemon)
+        private async Task CatchEncounter(dynamic encounter, MapPokemon pokemon, FortData currentFortData = null, ulong encounterId = 0)
         {
             CatchPokemonResponse caughtPokemonResponse;
             do
@@ -231,16 +255,24 @@ namespace PokemonGoBotLogic
                 if (encounter?.CaptureProbability.CaptureProbability_.First() < 0.35)
                 {
                     //Throw berry is we can
-                    await UseBerry(pokemon.EncounterId, pokemon.SpawnpointId);
+                    if (encounter is EncounterResponse)
+                    {
+                        await UseBerry(pokemon.EncounterId, pokemon.SpawnPointId);
+                    }
+                    else
+                    {
+                        await UseBerry(encounterId, currentFortData?.Id);
+                    }
                 }
 
-                var pokeball = await GetBestBall(encounter?.WildPokemon);
-                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng,
-                    pokemon.Latitude, pokemon.Longitude);
+                var pokeball = await GetBestBall(encounter);
+                /*var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
+                    pokemon.Latitude, pokemon.Longitude);*/
                 caughtPokemonResponse =
                     await
-                        PClient.CatchPokemon(pokemon.EncounterId, pokemon.SpawnpointId, pokemon.Latitude,
-                            pokemon.Longitude, pokeball);
+                        PClient.Encounter.CatchPokemon(encounter is EncounterResponse ? pokemon.EncounterId : encounterId,
+                        encounter is EncounterResponse ? pokemon.SpawnPointId : currentFortData.Id, 
+                        pokeball);
                 //Console.Write(caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchSuccess ? $"We caught a {pokemon.PokemonId} with CP {encounter?.WildPokemon?.PokemonData?.Cp} and CaptureProbability: {encounter?.CaptureProbability.CaptureProbability_.First()} using a {pokeball} in {Math.Round(distance)}m distance" : $"{pokemon.PokemonId} with CP {encounter?.WildPokemon?.PokemonData?.Cp} CaptureProbability: {encounter?.CaptureProbability.CaptureProbability_.First()} in {Math.Round(distance)}m distance {caughtPokemonResponse.Status} while using a {pokeball}..", LogLevel.Info);
                 await Task.Delay(2000);
             } while (caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchMissed ||
@@ -257,7 +289,7 @@ namespace PokemonGoBotLogic
             var pokemonToEvolve = await _inventory.GetPokemonToEvolve();
             foreach (var pokemon in pokemonToEvolve)
             {
-                await PClient.EvolvePokemon(pokemon.Id);
+                await _inventory.EvolvePokemon(pokemon.Id);
                 await Task.Delay(3000);
             }
         }
@@ -268,70 +300,72 @@ namespace PokemonGoBotLogic
 
             foreach (var duplicatePokemon in duplicatePokemons)
             {
-                await PClient.TransferPokemon(duplicatePokemon.Id);
+                await _inventory.TransferPokemon(duplicatePokemon.Id);
                 await Task.Delay(500);
             }
         }
 
         private async Task RecycleItems()
         {
-            var items = await _inventory.GetItemsToRecycle(PClientSettings);
+            var items = await _inventory.GetItemsToRecycle();
 
             foreach (var item in items)
             {
-                var transfer = await PClient.RecycleItem((ItemId) item.Item_, item.Count);
+                var transfer = await _inventory.RecycleItem(item.ItemId, item.Count);
                 //Console.Write($"Recycled {item.Count}x {(AllEnum.ItemId)item.Item_}", LogLevel.Info);
                 await Task.Delay(500);
             }
         }
 
-        private async Task<MiscEnums.Item> GetBestBall(WildPokemon pokemon)
+        private async Task<ItemId> GetBestBall(dynamic encounter)
         {
-            var pokemonCp = pokemon?.PokemonData?.Cp;
-            var pokeBallsCount = await _inventory.GetItemAmountByType(MiscEnums.Item.ITEM_POKE_BALL);
-            var greatBallsCount = await _inventory.GetItemAmountByType(MiscEnums.Item.ITEM_GREAT_BALL);
-            var ultraBallsCount = await _inventory.GetItemAmountByType(MiscEnums.Item.ITEM_ULTRA_BALL);
-            var masterBallsCount = await _inventory.GetItemAmountByType(MiscEnums.Item.ITEM_MASTER_BALL);
+            var pokemonCp = encounter is EncounterResponse
+                ? encounter.WildPokemon?.PokemonData?.Cp
+                : encounter?.PokemonData?.Cp;
+            var pokeBallsCount = await _inventory.GetItemAmountByType(ItemId.ItemPokeBall);
+            var greatBallsCount = await _inventory.GetItemAmountByType(ItemId.ItemGreatBall);
+            var ultraBallsCount = await _inventory.GetItemAmountByType(ItemId.ItemUltraBall);
+            var masterBallsCount = await _inventory.GetItemAmountByType(ItemId.ItemMasterBall);
 
             if (masterBallsCount > 0 && pokemonCp >= 1000)
-                return MiscEnums.Item.ITEM_MASTER_BALL;
+                return ItemId.ItemMasterBall;
             if (ultraBallsCount > 0 && pokemonCp >= 1000)
-                return MiscEnums.Item.ITEM_ULTRA_BALL;
+                return ItemId.ItemUltraBall;
             if (greatBallsCount > 0 && pokemonCp >= 1000)
-                return MiscEnums.Item.ITEM_GREAT_BALL;
+                return ItemId.ItemGreatBall;
 
             if (ultraBallsCount > 0 && pokemonCp >= 600)
-                return MiscEnums.Item.ITEM_ULTRA_BALL;
+                return ItemId.ItemUltraBall;
             if (greatBallsCount > 0 && pokemonCp >= 600)
-                return MiscEnums.Item.ITEM_GREAT_BALL;
+                return ItemId.ItemGreatBall;
 
             if (greatBallsCount > 0 && pokemonCp >= 350)
-                return MiscEnums.Item.ITEM_GREAT_BALL;
+                return ItemId.ItemGreatBall;
 
             if (pokeBallsCount > 0)
-                return MiscEnums.Item.ITEM_POKE_BALL;
+                return ItemId.ItemPokeBall;
             if (greatBallsCount > 0)
-                return MiscEnums.Item.ITEM_GREAT_BALL;
+                return ItemId.ItemGreatBall;
             if (ultraBallsCount > 0)
-                return MiscEnums.Item.ITEM_ULTRA_BALL;
+                return ItemId.ItemUltraBall;
             if (masterBallsCount > 0)
-                return MiscEnums.Item.ITEM_MASTER_BALL;
+                return ItemId.ItemMasterBall;
 
-            return MiscEnums.Item.ITEM_POKE_BALL;
+            return ItemId.ItemPokeBall;
         }
 
         public async Task UseBerry(ulong encounterId, string spawnPointId)
         {
             var inventoryBalls = await _inventory.GetItems();
-            var berries = inventoryBalls.Where(p => (ItemId) p.Item_ == ItemId.ItemRazzBerry);
+            var berries = inventoryBalls.Where(p => p.ItemId == ItemId.ItemRazzBerry);
             var berry = berries.FirstOrDefault();
 
             if (berry == null)
                 return;
 
-            var useRaspberry = await PClient.UseCaptureItem(encounterId, ItemId.ItemRazzBerry, spawnPointId);
+            var useRaspberry = await PClient.Encounter.UseCaptureItem(encounterId, ItemId.ItemRazzBerry, spawnPointId);
             // Logger.Write($"Use Rasperry. Remaining: {berry.Count}", LogLevel.Info);
-            await Task.Delay(3000);
+            await Task.Delay(1 * 1000);
         }
     }
 }

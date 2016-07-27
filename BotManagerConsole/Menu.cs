@@ -48,7 +48,7 @@ namespace BotManagerConsole
                     foreach (var account in AccountList.Instance.Accounts)
                     {
                        var bot =  BotManager.Instance.RequestBot(account);
-                        bot.SetLogic(new Logic(bot.Client, bot.Settings));
+                        bot.SetLogic(new Logic(bot.Client));
                     }
                     break;
                 case 1:
