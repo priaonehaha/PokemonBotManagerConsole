@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using PokemonGo.RocketAPI;
-using PokemonGo.RocketAPI.GeneratedCode;
+using POGOProtos.Data.Player;
 
 namespace PokemonBotManager.BotManager.Interfaces
 {

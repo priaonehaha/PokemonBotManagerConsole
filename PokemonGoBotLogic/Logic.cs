@@ -2,20 +2,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AllEnum;
 using PokemonGo.RocketAPI;
 using PokemonGo.RocketAPI.Enums;
 using PokemonGo.RocketAPI.Exceptions;
 using PokemonGo.RocketAPI.Extensions;
-using PokemonGo.RocketAPI.GeneratedCode;
 using PokemonBotManager.BotManager.Interfaces;
+using POGOProtos.Data;
+using POGOProtos.Data.Player;
+using POGOProtos.Enums;
+using POGOProtos.Inventory.Item;
+using POGOProtos.Map.Fort;
+using POGOProtos.Map.Pokemon;
+using POGOProtos.Networking.Responses;
 
 namespace PokemonGoBotLogic
 {
     public class Logic : ILogic
     {
         private readonly Inventory _inventory;
-        private readonly ISettings PClientSettings;
         private bool stop;
 
         public PokemonId[] UnwantedPokemonTypes =
@@ -60,16 +64,15 @@ namespace PokemonGoBotLogic
             PokemonId.Oddish,
             PokemonId.Gloom,
             PokemonId.Jigglypuff,
-            PokemonId.Clefary,
+            PokemonId.Clefairy,
             PokemonId.Electabuzz,
             PokemonId.Clefable,
             PokemonId.Sandshrew
         };
 
-        public Logic(Client client, ISettings settings)
+        public Logic(Client client)
         {
             PClient = client;
-            PClientSettings = settings;
             _inventory = new Inventory(client);
         }
 
@@ -83,9 +86,9 @@ namespace PokemonGoBotLogic
             {
                 try
                 {
-                    if (PClientSettings.AuthType == AuthType.Ptc)
-                        await PClient.DoPtcLogin(PClientSettings.PtcUsername, PClientSettings.PtcPassword);
-                    else if (PClientSettings.AuthType == AuthType.Google)
+                    if (PClient.Settings.AuthType == AuthType.Ptc)
+                        await PClient.Login.DoPtcLogin();
+                    else if (PClient.Settings.AuthType == AuthType.Google)
                         throw new NotImplementedException();
 
                     await PostLoginExecute();
@@ -104,8 +107,9 @@ namespace PokemonGoBotLogic
 
         public async Task<PlayerStats> GetPlayerStats()
         {
-            var stats = await _inventory.GetPlayerStats();
-            var stat = stats.FirstOrDefault();
+            var stat =
+                PClient.Inventory.GetInventory()
+                    .Result.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.PlayerStats).FirstOrDefault(p => p != null);
             return stat;
         }
 
@@ -116,7 +120,8 @@ namespace PokemonGoBotLogic
                 try
                 {
                     //Console.WriteLine($"{PClientSettings.PtcUsername}: Post Login Execute");
-                    await PClient.SetServer();
+                    
+                    //await PClient.SetServer(); // Not needed in new API
                     //var profile = await PClient.GetProfile();
 
                     await EvolveAllPokemonWithEnoughCandy();
@@ -130,10 +135,10 @@ namespace PokemonGoBotLogic
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"{PClientSettings.PtcUsername}'sPostLoginExecute exception: " + ex);
+                    Console.WriteLine($"{PClient.Settings.PtcUsername}'sPostLoginExecute exception: " + ex);
                 }
 
-                await Task.Delay(5000);
+                await Task.Delay(5 * 1000);
             }
         }
 
@@ -163,8 +168,8 @@ namespace PokemonGoBotLogic
         {
             foreach (var pokemon in unwantedPokemons)
             {
-                await PClient.TransferPokemon(pokemon.Id);
-                await Task.Delay(3000);
+                await _inventory.TransferPokemon(pokemon.Id);//.TransferPokemon(pokemon.Id);
+                await Task.Delay(500);
             }
         }
 
