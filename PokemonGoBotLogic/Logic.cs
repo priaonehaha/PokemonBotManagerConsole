@@ -218,7 +218,7 @@ namespace PokemonGoBotLogic
                 var encounter = await PClient.Encounter.EncounterLurePokemon(pokeStop.LureInfo.EncounterId, pokeStop.Id);
                 if (encounter.Result == DiskEncounterResponse.Types.Result.Success)
                 {
-                    await CatchEncounter(encounter);
+                    await CatchEncounter(encounter, null, pokeStop, pokeStop.LureInfo.EncounterId);
                 }
             }
         }
@@ -244,10 +244,10 @@ namespace PokemonGoBotLogic
                 await CatchEncounter(encounter, pokemon);
             }
 
-            await Task.Delay(15 * 1000);
+            await Task.Delay(5 * 1000);
         }
 
-        private async Task CatchEncounter(EncounterResponse encounter, MapPokemon pokemon)
+        private async Task CatchEncounter(dynamic encounter, MapPokemon pokemon, FortData currentFortData = null, ulong encounterId = 0)
         {
             CatchPokemonResponse caughtPokemonResponse;
             do
@@ -255,15 +255,24 @@ namespace PokemonGoBotLogic
                 if (encounter?.CaptureProbability.CaptureProbability_.First() < 0.35)
                 {
                     //Throw berry is we can
-                    await UseBerry(pokemon.EncounterId, pokemon.SpawnPointId);
+                    if (encounter is EncounterResponse)
+                    {
+                        await UseBerry(pokemon.EncounterId, pokemon.SpawnPointId);
+                    }
+                    else
+                    {
+                        await UseBerry(encounterId, currentFortData?.Id);
+                    }
                 }
 
-                var pokeball = await GetBestBall(encounter?.WildPokemon);
+                var pokeball = await GetBestBall(encounter);
                 /*var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
                     pokemon.Latitude, pokemon.Longitude);*/
                 caughtPokemonResponse =
                     await
-                        PClient.Encounter.CatchPokemon(pokemon.EncounterId, pokemon.SpawnPointId, pokeball);
+                        PClient.Encounter.CatchPokemon(encounter is EncounterResponse ? pokemon.EncounterId : encounterId,
+                        encounter is EncounterResponse ? pokemon.SpawnPointId : currentFortData.Id, 
+                        pokeball);
                 //Console.Write(caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchSuccess ? $"We caught a {pokemon.PokemonId} with CP {encounter?.WildPokemon?.PokemonData?.Cp} and CaptureProbability: {encounter?.CaptureProbability.CaptureProbability_.First()} using a {pokeball} in {Math.Round(distance)}m distance" : $"{pokemon.PokemonId} with CP {encounter?.WildPokemon?.PokemonData?.Cp} CaptureProbability: {encounter?.CaptureProbability.CaptureProbability_.First()} in {Math.Round(distance)}m distance {caughtPokemonResponse.Status} while using a {pokeball}..", LogLevel.Info);
                 await Task.Delay(2000);
             } while (caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchMissed ||
@@ -308,9 +317,11 @@ namespace PokemonGoBotLogic
             }
         }
 
-        private async Task<ItemId> GetBestBall(WildPokemon pokemon)
+        private async Task<ItemId> GetBestBall(dynamic encounter)
         {
-            var pokemonCp = pokemon?.PokemonData?.Cp;
+            var pokemonCp = encounter is EncounterResponse
+                ? encounter.WildPokemon?.PokemonData?.Cp
+                : encounter?.PokemonData?.Cp;
             var pokeBallsCount = await _inventory.GetItemAmountByType(ItemId.ItemPokeBall);
             var greatBallsCount = await _inventory.GetItemAmountByType(ItemId.ItemGreatBall);
             var ultraBallsCount = await _inventory.GetItemAmountByType(ItemId.ItemUltraBall);

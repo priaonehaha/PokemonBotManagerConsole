@@ -23,4 +23,3 @@ namespace PokemonBotManager.BotManager.Interfaces
         Task<PlayerStats> GetPlayerStats();
     }
 }
-}

@@ -30,12 +30,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Google.Protobuf, Version=3.0.0.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Dependecies\Google.Protobuf.dll</HintPath>
+    <Reference Include="Google.Protobuf">
+      <HintPath>..\Pokemon-Go-Rocket-API\PokemonGo.RocketAPI\bin\Debug\Google.Protobuf.dll</HintPath>
     </Reference>
     <Reference Include="POGOProtos">
-      <HintPath>D:\Work\Pokemon-Go-Rocket-API-master\PokemonGo.RocketAPI\bin\Debug\POGOProtos.dll</HintPath>
+      <HintPath>..\Pokemon-Go-Rocket-API\PokemonGo.RocketAPI\bin\Debug\POGOProtos.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -53,13 +52,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Pokemon-Go-Rocket-API\PokemonGo.RocketAPI\PokemonGo.RocketAPI.csproj">
+      <Project>{05d2da44-1b8e-4cf7-94ed-4d52451cd095}</Project>
+      <Name>PokemonGo.RocketAPI</Name>
+    </ProjectReference>
     <ProjectReference Include="..\PokemonBotManager\PokemonBotManager.csproj">
       <Project>{12755460-5534-4b58-9cc8-f35160ce1982}</Project>
       <Name>PokemonBotManager</Name>
-    </ProjectReference>
-    <ProjectReference Include="D:\Work\Pokemon-Go-Rocket-API-master\PokemonGo.RocketAPI\PokemonGo.RocketAPI.csproj">
-      <Project>{05d2da44-1b8e-4cf7-94ed-4d52451cd095}</Project>
-      <Name>PokemonGo.RocketAPI</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
