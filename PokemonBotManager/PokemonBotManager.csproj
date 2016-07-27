@@ -35,6 +35,10 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Google.Protobuf, Version=3.0.0.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Dependecies\Google.Protobuf.dll</HintPath>
+    </Reference>
     <Reference Include="Pokemon Go Rocket API, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Dependecies\Pokemon Go Rocket API.dll</HintPath>
@@ -56,6 +60,7 @@
     <Compile Include="BotManager\BotSettings.cs" />
     <Compile Include="BotManager\Exceptions\AccountAlreadyBindedException.cs" />
     <Compile Include="BotManager\Exceptions\BotLimitExceededException.cs" />
+    <Compile Include="BotManager\Exceptions\LocationNotSetException.cs" />
     <Compile Include="LocationHelper\Location.cs" />
     <Compile Include="LocationHelper\LocationManager.cs" />
     <Compile Include="Pokemon\Account.cs" />
@@ -70,7 +75,7 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
+      <Generator>PublicSettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
@@ -79,6 +84,9 @@
       <Project>{8b81b054-0124-4fbf-bcba-2570450a14f3}</Project>
       <Name>PokemonGoBotLogic</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

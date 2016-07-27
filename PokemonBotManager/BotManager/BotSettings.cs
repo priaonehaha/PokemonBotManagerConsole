@@ -12,9 +12,15 @@ namespace PokemonBotManager.BotManager
     {
         public AuthType AuthType => AuthType.Ptc;
         public double DefaultAltitude => 10d;
-        public double DefaultLatitude { get; set; }
-        public double DefaultLongitude { get; set; }
-
+        public double DefaultLatitude {
+            get { return BottingLocation.Latitude; }
+            set { throw new NotImplementedException(); }
+        }
+        public double DefaultLongitude
+        {
+            get { return BottingLocation.Longitude; }
+            set { throw new NotImplementedException(); }
+        }
         public string GoogleRefreshToken
         {
             get { return ""; }

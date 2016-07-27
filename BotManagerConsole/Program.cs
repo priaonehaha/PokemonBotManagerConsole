@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PokemonBotManager.BotManager;
 using PokemonBotManager.LocationHelper;
+using PokemonBotManager.Pokemon;
 
 namespace BotManagerConsole
 {
@@ -11,9 +13,14 @@ namespace BotManagerConsole
     {
         static void Main(string[] args)
         {
-            var kek = new Location("Central Park, New York", 40.7752279, -73.9715349);
-            LocationManager.Instance.AddLocation(kek);
+            Console.WindowWidth = 120;
+            LocationManager.Instance.AddLocation(new Location("Central Park, Manhattan", 40.782763, -73.967640));
+            AccountList.Instance.LoadFromFile();
+            Menu.MainLoop();
+            // var bot = BotManager.Instance.RequestBot(cykaAcc, CentralPark);
+            //bot.StartBot();
             LocationManager.Instance.Serialize();
+            AccountList.Instance.Serialize();
         }
     }
 }

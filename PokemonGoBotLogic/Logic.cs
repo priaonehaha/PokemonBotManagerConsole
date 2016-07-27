@@ -78,6 +78,7 @@ namespace PokemonGoBotLogic
 
         public async Task Execute()
         {
+            //Console.WriteLine($"Bot for {PClientSettings.PtcUsername} started {PClient.CurrentLat}, {PClient.CurrentLng}");
             while (!stop)
             {
                 try
@@ -92,13 +93,20 @@ namespace PokemonGoBotLogic
                 catch (AccessTokenExpiredException)
                 {
                 }
+                await Task.Delay(10*1000);
             }
-            await Task.Delay(10*1000);
         }
 
         public void StopBot()
         {
             stop = true;
+        }
+
+        public async Task<PlayerStats> GetPlayerStats()
+        {
+            var stats = await _inventory.GetPlayerStats();
+            var stat = stats.FirstOrDefault();
+            return stat;
         }
 
         public async Task PostLoginExecute()
@@ -107,6 +115,7 @@ namespace PokemonGoBotLogic
             {
                 try
                 {
+                    //Console.WriteLine($"{PClientSettings.PtcUsername}: Post Login Execute");
                     await PClient.SetServer();
                     //var profile = await PClient.GetProfile();
 
@@ -121,7 +130,7 @@ namespace PokemonGoBotLogic
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("PostLoginExecute exception: " + ex);
+                    Console.WriteLine($"{PClientSettings.PtcUsername}'sPostLoginExecute exception: " + ex);
                 }
 
                 await Task.Delay(5000);
@@ -169,15 +178,19 @@ namespace PokemonGoBotLogic
                         i =>
                             i.Type == FortType.Checkpoint &&
                             i.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime());
-
-            foreach (var pokeStop in pokeStops)
+            var fortDatas = pokeStops as FortData[] ?? pokeStops.ToArray();
+            foreach (var pokeStop in fortDatas)
             {
-                await
-                    PClient.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude, PClientSettings.DefaultAltitude);
-                await PClient.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
-                await PClient.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
+                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng,
+                    pokeStop.Latitude, pokeStop.Longitude);
+                var update = await PClient.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude, 10);
+                var fortInfo = await PClient.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
+                var fortSearch = await PClient.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
+                //Console.Write($"{PClientSettings.PtcUsername}: Using Pokestop: {fortInfo.Name} in {Math.Round(distance)}m distance");
+                //Console.Write($"{PClientSettings.PtcUsername}: Farmed XP: {fortSearch.ExperienceAwarded}, Gems: { fortSearch.GemsAwarded}, Eggs: {fortSearch.PokemonDataEgg} Items: {fortSearch.ItemsAwarded}");
 
 
+                //var profile = await PClient.GetProfile();
 
                 await Task.Delay(1000);
                 await RecycleItems();
@@ -191,8 +204,8 @@ namespace PokemonGoBotLogic
             var mapObjects = await PClient.GetMapObjects();
 
             var pokemons = mapObjects.MapCells.SelectMany(i => i.CatchablePokemons);
-
-            foreach (var pokemon in pokemons)
+            var mapPokemons = pokemons as MapPokemon[] ?? pokemons.ToArray();
+            foreach (var pokemon in mapPokemons)
             {
                 var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng,
                     pokemon.Latitude, pokemon.Longitude);
@@ -222,12 +235,13 @@ namespace PokemonGoBotLogic
                 }
 
                 var pokeball = await GetBestBall(encounter?.WildPokemon);
-                // var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng, pokemon.Latitude, pokemon.Longitude);
+                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLat, PClient.CurrentLng,
+                    pokemon.Latitude, pokemon.Longitude);
                 caughtPokemonResponse =
                     await
                         PClient.CatchPokemon(pokemon.EncounterId, pokemon.SpawnpointId, pokemon.Latitude,
                             pokemon.Longitude, pokeball);
-                // Logger.Write(caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchSuccess ? $"We caught a {pokemon.PokemonId} with CP {encounter?.WildPokemon?.PokemonData?.Cp} and CaptureProbability: {encounter?.CaptureProbability.CaptureProbability_.First()} using a {pokeball} in {Math.Round(distance)}m distance" : $"{pokemon.PokemonId} with CP {encounter?.WildPokemon?.PokemonData?.Cp} CaptureProbability: {encounter?.CaptureProbability.CaptureProbability_.First()} in {Math.Round(distance)}m distance {caughtPokemonResponse.Status} while using a {pokeball}..", LogLevel.Info);
+                //Console.Write(caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchSuccess ? $"We caught a {pokemon.PokemonId} with CP {encounter?.WildPokemon?.PokemonData?.Cp} and CaptureProbability: {encounter?.CaptureProbability.CaptureProbability_.First()} using a {pokeball} in {Math.Round(distance)}m distance" : $"{pokemon.PokemonId} with CP {encounter?.WildPokemon?.PokemonData?.Cp} CaptureProbability: {encounter?.CaptureProbability.CaptureProbability_.First()} in {Math.Round(distance)}m distance {caughtPokemonResponse.Status} while using a {pokeball}..", LogLevel.Info);
                 await Task.Delay(2000);
             } while (caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchMissed ||
                      caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchEscape);
@@ -266,7 +280,7 @@ namespace PokemonGoBotLogic
             foreach (var item in items)
             {
                 var transfer = await PClient.RecycleItem((ItemId) item.Item_, item.Count);
-                //Logger.Write($"Recycled {item.Count}x {(AllEnum.ItemId)item.Item_}", LogLevel.Info);
+                //Console.Write($"Recycled {item.Count}x {(AllEnum.ItemId)item.Item_}", LogLevel.Info);
                 await Task.Delay(500);
             }
         }

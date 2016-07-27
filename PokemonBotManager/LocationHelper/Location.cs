@@ -64,5 +64,10 @@ namespace PokemonBotManager.LocationHelper
                 return hashCode;
             }
         }
+
+        public override string ToString()
+        {
+            return $"{LocationId}, {LocationName}";
+        }
     }
 }

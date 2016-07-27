@@ -27,5 +27,10 @@ namespace PokemonBotManager.Pokemon
             Email = email;
             Verified = verified;
         }
+
+        public override string ToString()
+        {
+            return $"{Username}, {Email}";
+        }
     }
 }

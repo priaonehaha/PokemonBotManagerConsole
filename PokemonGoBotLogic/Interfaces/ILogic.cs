@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using PokemonGo.RocketAPI;
+using PokemonGo.RocketAPI.GeneratedCode;
 
 namespace PokemonGoBotLogic.Interfaces
 {
@@ -19,5 +20,6 @@ namespace PokemonGoBotLogic.Interfaces
         LogicStatus Status { get; set; }
         void StopBot();
         Task Execute();
+        Task<PlayerStats> GetPlayerStats();
     }
 }
