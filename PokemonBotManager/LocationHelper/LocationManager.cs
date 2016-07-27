@@ -65,7 +65,11 @@ namespace PokemonBotManager.LocationHelper
             location.LocationId = NextId;
             locations.Add(location);
             ++NextId;
+        }
 
+        public Location GetLocation(int Id)
+        {
+            return locations.FirstOrDefault(l => l.LocationId == Id);
         }
 
         public void Remove(Location location)
