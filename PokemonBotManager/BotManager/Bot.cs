@@ -100,6 +100,9 @@ namespace PokemonBotManager.BotManager
         //TODO: idk
         private void BotStopped(Task task)
         {
+            //YOU ARE  NOT ALLOWED TO STOP
+            Console.WriteLine($"{this} stopped, restarting");
+            StartBot();
         }
 
         public bool Equals(Bot oBot)

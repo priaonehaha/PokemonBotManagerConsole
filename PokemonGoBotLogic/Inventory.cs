@@ -37,7 +37,6 @@ namespace PokemonGoBotLogic
 
 
         private readonly Client _client;
-        private readonly BaseRpc _baseRpc;
         public Inventory(Client client) : base(client)
         {
             if (client == null)
