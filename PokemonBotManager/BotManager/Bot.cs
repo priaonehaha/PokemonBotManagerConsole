@@ -113,9 +113,9 @@ namespace PokemonBotManager.BotManager
         }
         private void Logic_CaughtException(object sender, CaughtExceptionEventArg e)
         {
-            if (e.Exception is AccessTokenExpiredException)
+            if (e.IsFatal)
             {
-                StopBot(true);
+                logic.StopBot();
                 StartBot();
             }
         }

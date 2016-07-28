@@ -11,7 +11,7 @@ namespace PokemonGoBotLogic.Logic
 
         protected virtual void OnCaughtException(CaughtExceptionEventArg e)
         {
-            if (e.Exception is AccessTokenExpiredException)
+            if (e.IsFatal)
             {
                 if (stopRequested)
                 {

@@ -11,6 +11,7 @@ using PokemonGoBotLogic.Helpers;
 using POGOProtos.Data.Player;
 using POGOProtos.Inventory.Item;
 using POGOProtos.Map.Fort;
+using POGOProtos.Networking.Responses;
 
 namespace PokemonGoBotLogic.Logic
 {
@@ -23,15 +24,16 @@ namespace PokemonGoBotLogic.Logic
 
     public partial class Logic : ILogic, IBotStatistics
     {
+        private readonly Inventory _inventory;
         private DateTime lastLuckyEggTime;
-        private bool stopRequested = false;
-        private Inventory _inventory;
         public bool ShouldEvolvePokemon;
         public bool ShouldRecycleItems;
         public bool ShouldTransferPokemon;
+        private bool stopRequested;
+        private readonly Dictionary<TaskJob, Func<Task>> taskDictionary = new Dictionary<TaskJob, Func<Task>>(3);
 
         private List<Pair<TaskJob, Task>> taskList;
-        private Dictionary<TaskJob, Func<Task>> taskDictionary = new Dictionary<TaskJob, Func<Task>>(3);
+
         public Logic(Client client)
         {
             PClient = client;
@@ -64,21 +66,32 @@ namespace PokemonGoBotLogic.Logic
                 var stat =
                     PClient.Inventory.GetInventory()
                         .Result.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.PlayerStats)
-                           .FirstOrDefault(p => p != null);
+                        .FirstOrDefault(p => p != null);
                 if (stat?.Level == 1 && stat.Experience == 0)
                 {
                     await PClient.Misc.ClaimCodename(PClient.Settings.PtcUsername);
-
+                    await PClient.Misc.MarkTutorialComplete();
                 }
             }
             catch (AccessTokenExpiredException e)
             {
-                OnCaughtException(new CaughtExceptionEventArg {Exception = e});
+                OnCaughtException(new CaughtExceptionEventArg(e));
+                return;
+            }
+            catch (PtcOfflineException e)
+            {
+                OnCaughtException(new CaughtExceptionEventArg(e));
+                return;
+            }
+            catch (Exception e)
+            {
+                OnCaughtException(new CaughtExceptionEventArg(e, true));
                 return;
             }
             foreach (var item in taskDictionary)
             {
-                taskList.Add(new Pair<TaskJob, Task>(item.Key, Task.Run(item.Value).ContinueWith(_ => OnTaskStopped(item))));
+                taskList.Add(new Pair<TaskJob, Task>(item.Key,
+                    Task.Run(item.Value).ContinueWith(_ => OnTaskStopped(item))));
             }
         }
 
@@ -106,9 +119,10 @@ namespace PokemonGoBotLogic.Logic
             {
                 return;
             }
-            int tupleIndex = taskList.FindIndex(t => t.Item1 == itemPair.Key);
+            await Task.Delay(100);
+            var tupleIndex = taskList.FindIndex(t => t.Item1 == itemPair.Key);
             //You are not allowed to stop
-            taskList[tupleIndex].Item2 = Task.Run(itemPair.Value).ContinueWith(_ => OnTaskStopped(itemPair)); 
+            taskList[tupleIndex].Item2 = Task.Run(itemPair.Value).ContinueWith(_ => OnTaskStopped(itemPair));
         }
 
         private async Task FarmPokeStops()
@@ -116,8 +130,11 @@ namespace PokemonGoBotLogic.Logic
             var numberOfPokestopsVisited = 0;
             var returnToStart = DateTime.Now;
             var pokeStopList = (await GetPokeStops())
-                .OrderBy(p => Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude, p.Latitude, p.Longitude));
-            FortData firstPokestop = pokeStopList.FirstOrDefault();
+                .OrderBy(
+                    p =>
+                        Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
+                            p.Latitude, p.Longitude)).ToList();
+            var firstPokestop = pokeStopList.FirstOrDefault();
 
             //var pokestopList = (await _map.GetPokeStops()).Where(t => t.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime()).ToList();
             while (!stopRequested)
@@ -125,9 +142,64 @@ namespace PokemonGoBotLogic.Logic
                 //TODO: implement snipe
                 if (returnToStart.AddMinutes(2) <= DateTime.Now)
                 {
-                    await PClient.Player.UpdatePlayerLocation(firstPokestop.Latitude, firstPokestop.Longitude, 10);
+                    Debug.WriteLine("TP to {0} {1}", firstPokestop?.Latitude, firstPokestop.Longitude);
+                    await TeleportToPokeStop(firstPokestop);
                     returnToStart = DateTime.Now;
                 }
+                if (!pokeStopList.Any())
+                {
+                    await TeleportToPokeStop(firstPokestop);
+                    var oldPokestopList = await GetPokeStops();
+                    if (oldPokestopList.Any())
+                        pokeStopList = oldPokestopList;
+                }
+                var newPokestopList = await GetPokeStops();
+                if (newPokestopList.Any())
+                    pokeStopList = newPokestopList;
+                if (!pokeStopList.Any())
+                    continue;
+                var closestPokestop = newPokestopList.OrderBy(
+                    i =>
+                        Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude,
+                            PClient.CurrentLongitude, i.Latitude, i.Longitude)).First();
+
+                if (firstPokestop == null)
+                    firstPokestop = closestPokestop;
+
+                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
+                    closestPokestop.Latitude, closestPokestop.Longitude);
+
+                //var fortWithPokemon = (await _map.GetFortWithPokemon());
+                //var biggestFort = fortWithPokemon.MaxBy(x => x.GymPoints);
+                if (distance > 100)
+                {
+                    var r = new Random((int) DateTime.Now.Ticks);
+                    closestPokestop =
+                        pokeStopList.ElementAt(r.Next(pokeStopList.Count));
+                }
+
+                await TeleportToPokeStop(closestPokestop);
+                var pokestopBooty =
+                    await
+                        PClient.Fort.SearchFort(closestPokestop.Id, closestPokestop.Latitude, closestPokestop.Longitude);
+                if (pokestopBooty.ExperienceAwarded > 0)
+                {
+                    Debug.WriteLine(
+                        $"[{numberOfPokestopsVisited++}] Pokestop rewarded us with {pokestopBooty.ExperienceAwarded} exp. {pokestopBooty.GemsAwarded} gems..");
+                    //_stats.ExperienceSinceStarted += pokestopBooty.ExperienceAwarded;
+                    //_stats.
+                }
+                else
+                {
+                    while (pokestopBooty.Result == FortSearchResponse.Types.Result.Success)
+                    {
+                        pokestopBooty =
+                            await
+                                PClient.Fort.SearchFort(closestPokestop.Id, closestPokestop.Latitude,
+                                    closestPokestop.Longitude);
+                    }
+                }
+                await Task.Delay(100);
             }
         }
 
@@ -137,6 +209,11 @@ namespace PokemonGoBotLogic.Logic
                 .Where(
                     f => f.Type == FortType.Checkpoint && f.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime())
                 .ToList();
+        }
+
+        private async Task TeleportToPokeStop(FortData pokestop)
+        {
+            await PClient.Player.UpdatePlayerLocation(pokestop.Latitude, pokestop.Longitude, 10);
         }
 
         private async Task RecycleItems()
@@ -164,14 +241,13 @@ namespace PokemonGoBotLogic.Logic
                 }
                 catch (AccessTokenExpiredException e)
                 {
-                    OnCaughtException(new CaughtExceptionEventArg{Exception = e});
+                    OnCaughtException(new CaughtExceptionEventArg(e));
                     break;
                 }
                 catch (Exception e)
                 {
                     Debug.WriteLine($"{e.InnerException}: Failed to recycle items");
                 }
-                    
             }
         }
 
@@ -193,7 +269,7 @@ namespace PokemonGoBotLogic.Logic
                 }
                 catch (AccessTokenExpiredException e)
                 {
-                    OnCaughtException(new CaughtExceptionEventArg { Exception = e });
+                    OnCaughtException(new CaughtExceptionEventArg(e));
                     break;
                 }
                 catch (Exception e)
@@ -228,12 +304,11 @@ namespace PokemonGoBotLogic.Logic
             }
             catch (AccessTokenExpiredException e)
             {
-                OnCaughtException(new CaughtExceptionEventArg { Exception = e });
+                OnCaughtException(new CaughtExceptionEventArg(e));
             }
             catch (Exception e)
             {
                 Debug.WriteLine($"{e.InnerException}: Failed to evolve Pokemons");
-
             }
         }
 
@@ -258,7 +333,7 @@ namespace PokemonGoBotLogic.Logic
             }
             catch (AccessTokenExpiredException e)
             {
-                OnCaughtException(new CaughtExceptionEventArg { Exception = e });
+                OnCaughtException(new CaughtExceptionEventArg(e));
             }
             catch (Exception e)
             {
