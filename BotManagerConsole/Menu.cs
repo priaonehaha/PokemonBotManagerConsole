@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using PokemonBotManager.BotManager;
 using PokemonBotManager.Pokemon;
 using PokemonGoBotLogic;
+using PokemonGoBotLogic.Logic;
 
 namespace BotManagerConsole
 {

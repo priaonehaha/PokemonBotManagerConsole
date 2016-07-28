@@ -6,6 +6,7 @@ using PokemonBotManager.BotManager.Interfaces;
 using PokemonBotManager.LocationHelper;
 using PokemonBotManager.Pokemon;
 using PokemonGo.RocketAPI;
+using PokemonGo.RocketAPI.Exceptions;
 
 namespace PokemonBotManager.BotManager
 {
@@ -32,6 +33,7 @@ namespace PokemonBotManager.BotManager
                 BottingLocation = LocationManager.Instance.GetLocations().FirstOrDefault()
             };
             Client = new Client(Settings);
+            
            // logic = new Logic(Client, Settings);
         }
 
@@ -64,17 +66,22 @@ namespace PokemonBotManager.BotManager
 
         public void SetLogic(ILogic newLogic)
         {
+            if (logic != null)
+            {
+                logic.CaughtException -= Logic_CaughtException;
+            }
             logic = newLogic;
+            logic.CaughtException += Logic_CaughtException;
         }
 
         public void StartBot()
         {
             if (Settings.BottingLocation == null)
             {
-                throw new LocationNotSetException($"The location for bot {BotId}, with Account {Settings.AccountData}");
+                throw new LocationNotSetException($"The location for bot {BotId}, with Account {Settings.AccountData} is not set");
             }
             Settings.AccountData.LatestLocationId = Settings.BottingLocation.LocationId;
-            botTask = Task.Run(logic.Execute).ContinueWith(BotStopped);
+            botTask = Task.Run(logic.Execute);
             //botTask.Start();
             //_client.Login.DoPtcLogin(Settings.AccountData.Username, Settings.AccountData.Password).Wait();
         }
@@ -103,6 +110,14 @@ namespace PokemonBotManager.BotManager
             //YOU ARE  NOT ALLOWED TO STOP
             Console.WriteLine($"{this} stopped, restarting");
             StartBot();
+        }
+        private void Logic_CaughtException(object sender, CaughtExceptionEventArg e)
+        {
+            if (e.Exception is AccessTokenExpiredException)
+            {
+                StopBot(true);
+                StartBot();
+            }
         }
 
         public bool Equals(Bot oBot)

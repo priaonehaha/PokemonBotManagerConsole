@@ -46,8 +46,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helpers\Pair.cs" />
     <Compile Include="Inventory.cs" />
-    <Compile Include="Logic.cs" />
+    <Compile Include="Logic\Logic.cs" />
+    <Compile Include="Logic\LogicExceptionhandler.cs" />
+    <Compile Include="Logic\LogicSettings.cs" />
     <Compile Include="Navigation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

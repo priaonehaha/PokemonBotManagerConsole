@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Google.Protobuf.Collections;
 using PokemonGo.RocketAPI;
 using PokemonGo.RocketAPI.Rpc;
 using POGOProtos.Data;
@@ -35,6 +36,7 @@ namespace PokemonGoBotLogic
             }
         }
 
+        public IEnumerable<ItemData> Items => InventoryResponse.InventoryDelta.InventoryItems.Select(t => t?.InventoryItemData?.Item).Where(i => i != null);
 
         private readonly Client _client;
         public Inventory(Client client) : base(client)
