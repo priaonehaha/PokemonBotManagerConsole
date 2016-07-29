@@ -9,8 +9,15 @@ namespace PokemonBotManager.BotManager
 {
     public class BotSettings : ISettings
     {
-        public AuthType AuthType => AuthType.Ptc;
         public double DefaultAltitude => 10d;
+        AuthType ISettings.AuthType {
+            get
+            {
+             return AuthType.Ptc;   
+            }
+            set { throw new NotImplementedException(); }
+        }
+
         public double DefaultLatitude {
             get { return BottingLocation.Latitude; }
             set { throw new NotImplementedException(); }
@@ -20,6 +27,9 @@ namespace PokemonBotManager.BotManager
             get { return BottingLocation.Longitude; }
             set { throw new NotImplementedException(); }
         }
+
+        double ISettings.DefaultAltitude { get; set; }
+
         public string GoogleRefreshToken
         {
             get { return ""; }
@@ -31,6 +41,9 @@ namespace PokemonBotManager.BotManager
             get { return AccountData.Username; }
             set { throw new NotImplementedException(); }
         }
+
+        public string GoogleUsername { get; set; }
+        public string GooglePassword { get; set; }
 
         public string PtcPassword
         {

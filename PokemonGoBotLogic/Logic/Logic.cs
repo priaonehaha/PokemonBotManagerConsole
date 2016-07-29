@@ -62,7 +62,7 @@ namespace PokemonGoBotLogic.Logic
             taskList = new List<Pair<TaskJob, Task>>(3);
             try
             {
-                await PClient.Login.DoPtcLogin();
+                await PClient.Login.DoPtcLogin(PClient.Settings.PtcUsername, PClient.Settings.PtcPassword);
                 var stat =
                     PClient.Inventory.GetInventory()
                         .Result.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.PlayerStats)
