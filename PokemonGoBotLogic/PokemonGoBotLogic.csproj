@@ -51,6 +51,8 @@
     <Compile Include="Logic\Logic.cs" />
     <Compile Include="Logic\LogicExceptionhandler.cs" />
     <Compile Include="Logic\LogicSettings.cs" />
+    <Compile Include="Logic\PokeballChooser.cs" />
+    <Compile Include="Logic\PokemonCatcher.cs" />
     <Compile Include="Navigation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -63,6 +65,9 @@
       <Project>{12755460-5534-4b58-9cc8-f35160ce1982}</Project>
       <Name>PokemonBotManager</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Extensions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -9,8 +9,10 @@ using PokemonGo.RocketAPI.Exceptions;
 using PokemonGo.RocketAPI.Extensions;
 using PokemonGoBotLogic.Helpers;
 using POGOProtos.Data.Player;
+using POGOProtos.Enums;
 using POGOProtos.Inventory.Item;
 using POGOProtos.Map.Fort;
+using POGOProtos.Map.Pokemon;
 using POGOProtos.Networking.Responses;
 
 namespace PokemonGoBotLogic.Logic
@@ -139,66 +141,79 @@ namespace PokemonGoBotLogic.Logic
             //var pokestopList = (await _map.GetPokeStops()).Where(t => t.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime()).ToList();
             while (!stopRequested)
             {
-                //TODO: implement snipe
-                if (returnToStart.AddMinutes(2) <= DateTime.Now)
+                try
                 {
-                    Debug.WriteLine("TP to {0} {1}", firstPokestop?.Latitude, firstPokestop.Longitude);
-                    await TeleportToPokeStop(firstPokestop);
-                    returnToStart = DateTime.Now;
-                }
-                if (!pokeStopList.Any())
-                {
-                    await TeleportToPokeStop(firstPokestop);
-                    var oldPokestopList = await GetPokeStops();
-                    if (oldPokestopList.Any())
-                        pokeStopList = oldPokestopList;
-                }
-                var newPokestopList = await GetPokeStops();
-                if (newPokestopList.Any())
-                    pokeStopList = newPokestopList;
-                if (!pokeStopList.Any())
-                    continue;
-                var closestPokestop = newPokestopList.OrderBy(
-                    i =>
-                        Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude,
-                            PClient.CurrentLongitude, i.Latitude, i.Longitude)).First();
-
-                if (firstPokestop == null)
-                    firstPokestop = closestPokestop;
-
-                var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
-                    closestPokestop.Latitude, closestPokestop.Longitude);
-
-                //var fortWithPokemon = (await _map.GetFortWithPokemon());
-                //var biggestFort = fortWithPokemon.MaxBy(x => x.GymPoints);
-                if (distance > 100)
-                {
-                    var r = new Random((int) DateTime.Now.Ticks);
-                    closestPokestop =
-                        pokeStopList.ElementAt(r.Next(pokeStopList.Count));
-                }
-
-                await TeleportToPokeStop(closestPokestop);
-                var pokestopBooty =
-                    await
-                        PClient.Fort.SearchFort(closestPokestop.Id, closestPokestop.Latitude, closestPokestop.Longitude);
-                if (pokestopBooty.ExperienceAwarded > 0)
-                {
-                    Debug.WriteLine(
-                        $"[{numberOfPokestopsVisited++}] Pokestop rewarded us with {pokestopBooty.ExperienceAwarded} exp. {pokestopBooty.GemsAwarded} gems..");
-                    //_stats.ExperienceSinceStarted += pokestopBooty.ExperienceAwarded;
-                    //_stats.
-                }
-                else
-                {
-                    while (pokestopBooty.Result == FortSearchResponse.Types.Result.Success)
+                    //TODO: implement snipe
+                    if (returnToStart.AddMinutes(2) <= DateTime.Now)
                     {
-                        pokestopBooty =
-                            await
-                                PClient.Fort.SearchFort(closestPokestop.Id, closestPokestop.Latitude,
-                                    closestPokestop.Longitude);
+                        Debug.WriteLine("TP to {0} {1}", firstPokestop?.Latitude, firstPokestop.Longitude);
+                        await TeleportToPokeStop(firstPokestop);
+                        returnToStart = DateTime.Now;
+                    }
+                    if (!pokeStopList.Any())
+                    {
+                        await TeleportToPokeStop(firstPokestop);
+                        var oldPokestopList = await GetPokeStops();
+                        if (oldPokestopList.Any())
+                            pokeStopList = oldPokestopList;
+                    }
+                    var newPokestopList = await GetPokeStops();
+                    if (newPokestopList.Any())
+                        pokeStopList = newPokestopList;
+                    if (!pokeStopList.Any())
+                        continue;
+                    var closestPokestop = newPokestopList.OrderBy(
+                        i =>
+                            Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude,
+                                PClient.CurrentLongitude, i.Latitude, i.Longitude)).First();
+
+                    if (firstPokestop == null)
+                        firstPokestop = closestPokestop;
+
+                    var distance = Navigation.DistanceBetween2Coordinates(PClient.CurrentLatitude, PClient.CurrentLongitude,
+                        closestPokestop.Latitude, closestPokestop.Longitude);
+
+                    //var fortWithPokemon = (await _map.GetFortWithPokemon());
+                    //var biggestFort = fortWithPokemon.MaxBy(x => x.GymPoints);
+                    if (distance > 100)
+                    {
+                        var r = new Random((int)DateTime.Now.Ticks);
+                        closestPokestop =
+                            pokeStopList.ElementAt(r.Next(pokeStopList.Count));
+                    }
+
+                    await TeleportToPokeStop(closestPokestop);
+                    var pokestopBooty =
+                        await
+                            PClient.Fort.SearchFort(closestPokestop.Id, closestPokestop.Latitude, closestPokestop.Longitude);
+                    if (pokestopBooty.ExperienceAwarded > 0)
+                    {
+                        Debug.WriteLine(
+                            $"[{numberOfPokestopsVisited++}] Pokestop rewarded us with {pokestopBooty.ExperienceAwarded} exp. {pokestopBooty.GemsAwarded} gems..");
+                        //_stats.ExperienceSinceStarted += pokestopBooty.ExperienceAwarded;
+                        //_stats.
+                    }
+                    else
+                    {
+                        while (pokestopBooty.Result == FortSearchResponse.Types.Result.Success)
+                        {
+                            pokestopBooty =
+                                await
+                                    PClient.Fort.SearchFort(closestPokestop.Id, closestPokestop.Latitude,
+                                        closestPokestop.Longitude);
+                        }
                     }
                 }
+                catch (AccessTokenExpiredException e)
+                {
+                    OnCaughtException(new CaughtExceptionEventArg(e));
+                    break;
+                }
+                catch (Exception e)
+                {
+                    //ignored?
+                }
+
                 await Task.Delay(100);
             }
         }
@@ -209,6 +224,64 @@ namespace PokemonGoBotLogic.Logic
                 .Where(
                     f => f.Type == FortType.Checkpoint && f.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime())
                 .ToList();
+        }
+
+        private async Task CatchNearbyPokemmon(FortData pokeStop)
+        {
+            var mapObjects = (await PClient.Map.GetMapObjects());
+            var catchable = mapObjects.MapCells.SelectMany(i => i.CatchablePokemons).ToList();
+            var wild = mapObjects.MapCells.SelectMany(x => x.WildPokemons).Select(x => new MapPokemon()
+            {
+                EncounterId = x.EncounterId,
+                SpawnPointId = x.SpawnPointId,
+                PokemonId = x.PokemonData.PokemonId
+            });
+            catchable.AddRange(wild);
+            var pokemon = catchable.OrderBy(p => Navigation
+                .DistanceBetween2Coordinates(p.Latitude, p.Longitude, PClient.CurrentLatitude, PClient.CurrentLongitude))
+                .ToList();
+            if (pokemon.Any())
+            {
+                var pokemonList = string.Join(", ", pokemon.Select(x => x.PokemonId).ToArray());
+                Debug.WriteLine($"{pokemon.Count()} Pokemon found: {pokemonList}");
+            }
+
+            if (pokeStop?.LureInfo != null && pokeStop.LureInfo.ActivePokemonId != PokemonId.Missingno)
+            {
+                var encounterId = pokeStop.LureInfo.EncounterId;
+                var encounter = await PClient.Encounter.EncounterLurePokemon(encounterId, pokeStop.Id);
+                if (encounter.Result == DiskEncounterResponse.Types.Result.Success)
+                {
+
+                    await CatchLurePokemon(encounterId, pokeStop.Id, encounter, encounter.PokemonData.PokemonId);
+                }
+            }
+            var catchPokemonTaskList = new List<Task>();
+            foreach (var mapPokemon in pokemon)
+            {
+                var encounter = await PClient.Encounter.EncounterPokemon(mapPokemon.EncounterId, mapPokemon.SpawnPointId);
+                if (encounter.Status == EncounterResponse.Types.Status.EncounterSuccess)
+                {
+                    catchPokemonTaskList.Add(new Task(async () =>
+                    {
+                        try
+                        {
+                            await CatchWildPokemon(encounter, mapPokemon);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }));
+                }
+                else
+                {
+                    if (encounter.Status != EncounterResponse.Types.Status.EncounterAlreadyHappened)
+                        Debug.WriteLine($"Unable to catch pokemon. Reason: {encounter.Status}");
+                }
+            }
+            catchPokemonTaskList.ForEach(x => x.Start());
+            Task.WaitAll(catchPokemonTaskList.ToArray());
+
         }
 
         private async Task TeleportToPokeStop(FortData pokestop)
@@ -257,6 +330,7 @@ namespace PokemonGoBotLogic.Logic
             {
                 try
                 {
+                    EvolvePokemon();
                     var pokemonList = await _inventory.GetDuplicatePokemonToTransfer();
                     foreach (var pokemonData in pokemonList)
                     {
@@ -282,12 +356,13 @@ namespace PokemonGoBotLogic.Logic
 
         private void EvolvePokemon()
         {
-            UseLuckyEgg();
             try
             {
+                UseLuckyEgg();
                 var pokemonData = _inventory.GetPokemonToEvolve().Result;
                 foreach (var pokemon in pokemonData)
                 {
+                    Debug.WriteLine($" Evolving {pokemon.PokemonId} with cp {pokemon.Cp}");
                     try
                     {
                         _inventory.EvolvePokemon(pokemon.Id).Wait();
@@ -329,16 +404,18 @@ namespace PokemonGoBotLogic.Logic
                 }
                 await _inventory.UseItemXpBoost();
                 lastLuckyEggTime = DateTime.Now;
-                await Task.Delay(10*1000);
+                Debug.WriteLine("Used Luccky egg");
             }
             catch (AccessTokenExpiredException e)
             {
-                OnCaughtException(new CaughtExceptionEventArg(e));
+                throw;
             }
             catch (Exception e)
             {
                 Debug.WriteLine($"{e.InnerException}: Failed to Use Lucky Egg");
             }
+            await Task.Delay(10 * 1000);
+
         }
     }
 }
